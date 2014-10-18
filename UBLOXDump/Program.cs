@@ -36,7 +36,7 @@ namespace UBLOXDump
             public uint startaddr;
             public uint datasize;
             public uint flags;
-            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 64)]
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 128)]
             public byte[] data;
         }
 
@@ -64,7 +64,7 @@ namespace UBLOXDump
             public uint flags;
         }
 
-        static void ExtractPacketAddresses(string file, string outputfile, int startoffset)
+        static void ExtractPacketAddresses(string file, string outputfile, int startoffset, int secondsoffset = 0)
         {
             if (!File.Exists(file))
                 return;
@@ -114,19 +114,34 @@ namespace UBLOXDump
                 tw.WriteLine(addr.ToString("X"));
             }
 
-            br.BaseStream.Seek(lowestoffset, SeekOrigin.Begin);
-            while (br.BaseStream.Position < (lowestoffset + 0x10000) && br.BaseStream.Length > (lowestoffset + 0x10000))
+            tw.WriteLine("Message in FW");
+
+            //second
+            if (secondsoffset > 0)
             {
-                long pos =  br.BaseStream.Position;
-                byte ch = br.ReadByte();
+                br.BaseStream.Seek(secondsoffset, SeekOrigin.Begin);
 
-                if (ch == 0xb5)
+                try
                 {
-                    UInt64 chs = br.ReadUInt64();
 
-                    tw.WriteLine("posible msg 0xb5 " + chs.ToString("X") + "\t" + pos.ToString("X"));
+                    while (br.BaseStream.Position < (secondsoffset + 0x3e0))
+                    {
+                        long posstart = br.BaseStream.Position;
+
+                        byte clas = br.ReadByte();
+                        byte subclas = br.ReadByte();
+
+                        br.BaseStream.Seek(2, SeekOrigin.Current);
+
+                        uint addr = br.ReadUInt32();
+
+                        br.BaseStream.Seek(4, SeekOrigin.Current);
+
+                        tw.WriteLine(posstart.ToString("X") + "\t" + clas.ToString("X") + "\t" + subclas.ToString("X") + "\t" + addr.ToString("X"));
+                    }
                 }
-            }
+                catch { }
+            }     
 
             tw.Close();
 
@@ -161,28 +176,26 @@ namespace UBLOXDump
 
         static void Main(string[] args)
         {
-            ExtractPacketAddresses("ublox 6mdata.raw", "Addrneo6m.txt", 0x1420);
+            ExtractPacketAddresses("ublox 6mdata.raw", "Addrneo6m.txt", 0x1420,0x26ddf4);
 
-            ExtractPacketAddresses("dataneo7n.raw", "Addrneo7n.txt", 0x1420);
+            ExtractPacketAddresses("datalea6h.raw", "Addrlea6h.txt", 0x3e4c,0x8546dc);
 
-            ExtractPacketAddresses("datalea6h.raw", "Addrlea6h.txt", 0x3e4c);
+            ExtractPacketAddresses("datalea6h-nu602.raw", "Addrlea6hnu602.txt", 0x3e4c, 0x8546dc);
 
-            ExtractPacketAddresses("datalea6h-nu602.raw", "Addrlea6hnu602.txt", 0x3e4c);
-
-            
-            
+            ExtractPacketAddresses("dataneo7n.raw", "Addrneo7n.txt", 0x20001188, 0x862f0c);         
             
 
-              //  return;
+             //   return;
 
             ICommsSerial port = new TcpSerial();//new SerialPort("com35",115200);
-            port = new MissionPlanner.Comms.SerialPort();
+            //port = new MissionPlanner.Comms.SerialPort();
 
-            port.PortName = "com35";
-            port.BaudRate = 115200;
+            //port.PortName = "com35";
+            //port.BaudRate = 115200;
 
-            //port.PortName = "127.0.0.1";
-            //port.BaudRate = 500;
+            // mp internal pass
+            port.PortName = "127.0.0.1";
+            port.BaudRate = 500;
 
             port.ReadBufferSize = 1024 * 1024;
 
@@ -265,7 +278,9 @@ b5 62 09 01 10 00 0c 19 00 00 00 00 00 00 83 69 21 00 00 00 02 11 5f f0
             //turnon(port, header, 2, 0x24);
             //turnon(port, header, 2, 0x51);
             //turnon(port, header, 2, 0x52);
-            //turnon(port, header, 2, 0x53);
+
+           // turnon(port.BaseStream, header, 3, 0xA);
+           // turnon(port.BaseStream, header, 3, 0xF);
 
             //writepacket(port.BaseStream, header, rxmraw);
             //writepacket(port.BaseStream, header, rxmsfrb);
@@ -283,10 +298,10 @@ b5 62 09 01 10 00 0c 19 00 00 00 00 00 00 83 69 21 00 00 00 02 11 5f f0
 
 
 
+            /*
+            System.Threading.Thread.Sleep(200);
 
-           // System.Threading.Thread.Sleep(200);
-
-           // while (port.IsOpen)
+            while (port.IsOpen)
             {
 
                 while (port.BytesToRead > 0)
@@ -300,33 +315,42 @@ b5 62 09 01 10 00 0c 19 00 00 00 00 00 00 83 69 21 00 00 00 02 11 5f f0
 
             }
 
-         //   port.Close();
+            port.Close();
 
            // Console.ReadLine();
 
-          //  return;
+            return;
+             */
 
             req = new uploadreq();
             req.clas = 0x9;
             req.subclass = 0x2;
             req.length = 12;
             req.startaddr = 0;
-            req.datasize = 64;
+            req.datasize = 128;
             req.flags = 0;
+
+            DateTime deadline = DateTime.MinValue;
+            uint lastaddr = 0;
 
             while (port.IsOpen)
             {
-                byte[] datastruct = StaticUtils.StructureToByteArray(req);
+                // determine when to send a new/next request
+                if (deadline < DateTime.Now || lastaddr != req.startaddr)
+                {
+                    byte[] datastruct = StaticUtils.StructureToByteArray(req);
 
-                byte[] checksum = ubx_checksum(datastruct, datastruct.Length);
+                    byte[] checksum = ubx_checksum(datastruct, datastruct.Length);
 
-                port.Write(header, 0, header.Length);
-                port.Write(datastruct, 0, datastruct.Length);
-                port.Write(checksum,0,checksum.Length);
+                    port.Write(header, 0, header.Length);
+                    port.Write(datastruct, 0, datastruct.Length);
+                    port.Write(checksum, 0, checksum.Length);
 
-                System.Threading.Thread.Sleep(20);
+                    deadline = DateTime.Now.AddMilliseconds(200);
+                    lastaddr = req.startaddr;
+                }
 
-               // Console.WriteLine("btr " + port.BytesToRead  + " " + port.BytesToWrite);
+                System.Threading.Thread.Sleep(1);
 
                 while (port.BytesToRead > 0)
                 {
