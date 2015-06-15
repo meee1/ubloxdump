@@ -1,27 +1,48 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
-using System.IO.Ports;
 using System.IO;
 using System.Linq;
 using System.Management;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using Microsoft.Win32.SafeHandles;
+using System.Text;
 using System.Threading;
 using log4net;
+using Microsoft.Win32.SafeHandles;
 
 namespace MissionPlanner.Comms
 {
-
     public class SerialPort : System.IO.Ports.SerialPort, ICommsSerial
     {
         private static readonly ILog log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+        private static readonly object locker = new object();
+        private static readonly Dictionary<string, string> comportnamecache = new Dictionary<string, string>();
+        private static string portnamenice = "";
 
-        static object locker = new object();
+        public new bool DtrEnable
+        {
+            get { return base.DtrEnable; }
+            set
+            {
+                log.Info(PortName + " DtrEnable " + value);
+                if (base.DtrEnable == value) return;
+                if (ispx4(PortName)) return;
+                base.DtrEnable = value;
+            }
+        }
 
-        public new bool DtrEnable { get { return base.DtrEnable; } set { log.Info(base.PortName + " DtrEnable " + value); if (base.DtrEnable == value) return; if (ispx4(base.PortName)) return; base.DtrEnable = value; } }
-        public new bool RtsEnable { get { return base.RtsEnable; } set { log.Info(base.PortName + " RtsEnable " + value); if (base.RtsEnable == value) return; if (ispx4(base.PortName)) return; base.RtsEnable = value; } }
+        public new bool RtsEnable
+        {
+            get { return base.RtsEnable; }
+            set
+            {
+                log.Info(PortName + " RtsEnable " + value);
+                if (base.RtsEnable == value) return;
+                if (ispx4(PortName)) return;
+                base.RtsEnable = value;
+            }
+        }
+
         /*
         protected override void Dispose(bool disposing)
         {
@@ -54,21 +75,25 @@ namespace MissionPlanner.Comms
             catch (Exception ex) { Console.WriteLine("3 " + ex.ToString()); }
         }
         */
+
         public new void Open()
         {
             // 500ms write timeout - win32 api default
-            this.WriteTimeout = 500;
+            WriteTimeout = 500;
 
-            if (base.IsOpen)
+            if (IsOpen)
                 return;
 
             try
             {
-              //  Console.WriteLine("Doing SerialPortFixer");
-              //  SerialPortFixer.Execute(this.PortName);
-              //  Console.WriteLine("Done SerialPortFixer");
+                //  Console.WriteLine("Doing SerialPortFixer");
+                //  SerialPortFixer.Execute(this.PortName);
+                //  Console.WriteLine("Done SerialPortFixer");
             }
-            catch (Exception ex) { Console.WriteLine(ex.ToString()); }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
 
             if (PortName.StartsWith("/"))
                 if (!File.Exists(PortName))
@@ -78,49 +103,59 @@ namespace MissionPlanner.Comms
             {
                 base.Open();
             }
-            catch {
-                try { base.Close(); }
-                catch { }
+            catch
+            {
+                try
+                {
+                    Close();
+                }
+                catch
+                {
+                }
                 throw;
             }
         }
 
         public void toggleDTR()
         {
-            if (ispx4(this.PortName))
+            if (ispx4(PortName))
             {
                 Console.WriteLine("PX4 - no DTR");
                 return;
             }
 
 
-            bool open = this.IsOpen;
-            Console.WriteLine("toggleDTR " + this.IsOpen);
+            var open = IsOpen;
+            Console.WriteLine("toggleDTR " + IsOpen);
             try
             {
                 if (!open)
-                    this.Open();
+                    Open();
             }
-            catch { }
+            catch
+            {
+            }
 
 
             base.DtrEnable = false;
             base.RtsEnable = false;
 
-            System.Threading.Thread.Sleep(50);
+            Thread.Sleep(50);
 
             base.DtrEnable = true;
             base.RtsEnable = true;
 
-            System.Threading.Thread.Sleep(50);
+            Thread.Sleep(50);
 
             try
             {
                 if (!open)
-                    this.Close();
+                    Close();
             }
-            catch { }
-            Console.WriteLine("toggleDTR done " + this.IsOpen);
+            catch
+            {
+            }
+            Console.WriteLine("toggleDTR done " + IsOpen);
         }
 
         public new static string[] GetPortNames()
@@ -128,7 +163,7 @@ namespace MissionPlanner.Comms
             // prevent hammering
             lock (locker)
             {
-                List<string> allPorts = new List<string>();
+                var allPorts = new List<string>();
 
                 if (Directory.Exists("/dev/"))
                 {
@@ -140,41 +175,49 @@ namespace MissionPlanner.Comms
                         if (Directory.Exists("/dev/serial/by-id/"))
                             allPorts.AddRange(Directory.GetFiles("/dev/serial/by-id/", "*"));
                     }
-                    catch { }
+                    catch
+                    {
+                    }
                     try
                     {
                         allPorts.AddRange(Directory.GetFiles("/dev/", "ttyACM*"));
                     }
-                    catch { }
+                    catch
+                    {
+                    }
                     try
                     {
                         allPorts.AddRange(Directory.GetFiles("/dev/", "ttyUSB*"));
                     }
-                    catch { }
+                    catch
+                    {
+                    }
                     try
                     {
                         allPorts.AddRange(Directory.GetFiles("/dev/", "rfcomm*"));
                     }
-                    catch { }
+                    catch
+                    {
+                    }
                     try
                     {
                         allPorts.AddRange(Directory.GetFiles("/dev/", "*usb*"));
                     }
-                    catch { }
+                    catch
+                    {
+                    }
                 }
 
-                string[] ports = System.IO.Ports.SerialPort.GetPortNames()
-                .Select(p => p.TrimEnd())
-                .Select(FixBlueToothPortNameBug)
-                .ToArray();
+                var ports = System.IO.Ports.SerialPort.GetPortNames()
+                    .Select(p => p.TrimEnd())
+                    .Select(FixBlueToothPortNameBug)
+                    .ToArray();
 
                 allPorts.AddRange(ports);
 
                 return allPorts.ToArray();
             }
         }
-
-        static Dictionary<string, string> comportnamecache = new Dictionary<string, string>();
 
         public static string GetNiceName(string port)
         {
@@ -192,7 +235,7 @@ namespace MissionPlanner.Comms
 
                 try
                 {
-                    CallWithTimeout(new Action<string>(GetName), 1000, port);
+                    CallWithTimeout(GetName, 1000, port);
                 }
                 catch
                 {
@@ -201,18 +244,16 @@ namespace MissionPlanner.Comms
 
                 comportnamecache[port] = portnamenice;
 
-                return (string)portnamenice.Clone();
+                return (string) portnamenice.Clone();
             }
         }
 
-        static string portnamenice = "";
-
-        static void GetName(string port)
+        private static void GetName(string port)
         {
             try
             {
-                ObjectQuery query = new ObjectQuery("SELECT * FROM Win32_SerialPort"); // Win32_USBControllerDevice
-                ManagementObjectSearcher searcher = new ManagementObjectSearcher(query);
+                var query = new ObjectQuery("SELECT * FROM Win32_SerialPort"); // Win32_USBControllerDevice
+                var searcher = new ManagementObjectSearcher(query);
                 foreach (ManagementObject obj2 in searcher.Get())
                 {
                     //DeviceID                     
@@ -223,12 +264,14 @@ namespace MissionPlanner.Comms
                     }
                 }
             }
-            catch { }
+            catch
+            {
+            }
 
             portnamenice = "";
         }
 
-        static void CallWithTimeout(Action<string> action, int timeoutMilliseconds, string data)
+        private static void CallWithTimeout(Action<string> action, int timeoutMilliseconds, string data)
         {
             Thread threadToKill = null;
             Action wrappedAction = () =>
@@ -237,7 +280,7 @@ namespace MissionPlanner.Comms
                 action(data);
             };
 
-            IAsyncResult result = wrappedAction.BeginInvoke(null, null);
+            var result = wrappedAction.BeginInvoke(null, null);
             if (result.AsyncWaitHandle.WaitOne(timeoutMilliseconds))
             {
                 wrappedAction.EndInvoke(result);
@@ -253,8 +296,8 @@ namespace MissionPlanner.Comms
         {
             try
             {
-                ObjectQuery query = new ObjectQuery("SELECT * FROM Win32_SerialPort"); // Win32_USBControllerDevice
-                ManagementObjectSearcher searcher = new ManagementObjectSearcher(query);
+                var query = new ObjectQuery("SELECT * FROM Win32_SerialPort"); // Win32_USBControllerDevice
+                var searcher = new ManagementObjectSearcher(query);
                 foreach (ManagementObject obj2 in searcher.Get())
                 {
                     //DeviceID                     
@@ -265,7 +308,10 @@ namespace MissionPlanner.Comms
                     }
                 }
             }
-            catch (Exception ex) { log.Error(ex); }
+            catch (Exception ex)
+            {
+                log.Error(ex);
+            }
 
             return false;
         }
@@ -279,8 +325,9 @@ namespace MissionPlanner.Comms
         {
             if (!portName.StartsWith("COM"))
                 return portName;
-            var newPortName = "COM";                                // Start over with "COM" 
-            foreach (var portChar in portName.Substring(3).ToCharArray())  //  Remove "COM", put the rest in a character array 
+            var newPortName = "COM"; // Start over with "COM" 
+            foreach (var portChar in portName.Substring(3).ToCharArray())
+                //  Remove "COM", put the rest in a character array 
             {
                 if (char.IsDigit(portChar))
                     newPortName += portChar.ToString(); // Good character, append to portName 
@@ -294,12 +341,6 @@ namespace MissionPlanner.Comms
 
     public sealed class SerialPortFixer : IDisposable
     {
-        public static void Execute(string portName)
-        {
-            using (new SerialPortFixer(portName))
-            {
-            }
-        }
         #region IDisposable Members
 
         public void Dispose()
@@ -314,6 +355,13 @@ namespace MissionPlanner.Comms
 
         #endregion
 
+        public static void Execute(string portName)
+        {
+            using (new SerialPortFixer(portName))
+            {
+            }
+        }
+
         #region Implementation
 
         private const int DcbFlagAbortOnError = 14;
@@ -323,19 +371,20 @@ namespace MissionPlanner.Comms
         private SerialPortFixer(string portName)
         {
             const int dwFlagsAndAttributes = 0x40000000;
-            const int dwAccess = unchecked((int)0xC0000000); if ((portName == null) || !portName.StartsWith("COM", StringComparison.OrdinalIgnoreCase))
+            const int dwAccess = unchecked((int) 0xC0000000);
+            if ((portName == null) || !portName.StartsWith("COM", StringComparison.OrdinalIgnoreCase))
             {
                 throw new ArgumentException("Invalid Serial Port", "portName");
             }
-            SafeFileHandle hFile = NativeMethods.CreateFile(@"\\.\" + portName, dwAccess, 0, IntPtr.Zero, 3, dwFlagsAndAttributes,
-                                              IntPtr.Zero);
+            var hFile = NativeMethods.CreateFile(@"\\.\" + portName, dwAccess, 0, IntPtr.Zero, 3, dwFlagsAndAttributes,
+                IntPtr.Zero);
             if (hFile.IsInvalid)
             {
                 WinIoError();
             }
             try
             {
-                int fileType = NativeMethods.GetFileType(hFile);
+                var fileType = NativeMethods.GetFileType(hFile);
                 if ((fileType != 2) && (fileType != 0))
                 {
                     throw new ArgumentException("Invalid Serial Port", "portName");
@@ -355,7 +404,7 @@ namespace MissionPlanner.Comms
         {
             [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
             internal static extern int FormatMessage(int dwFlags, HandleRef lpSource, int dwMessageId, int dwLanguageId,
-                                                    StringBuilder lpBuffer, int nSize, IntPtr arguments);
+                StringBuilder lpBuffer, int nSize, IntPtr arguments);
 
             [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
             internal static extern bool GetCommState(SafeFileHandle hFile, ref Dcb lpDcb);
@@ -368,17 +417,16 @@ namespace MissionPlanner.Comms
 
             [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
             internal static extern SafeFileHandle CreateFile(string lpFileName, int dwDesiredAccess, int dwShareMode,
-                                                            IntPtr securityAttrs, int dwCreationDisposition,
-                                                            int dwFlagsAndAttributes, IntPtr hTemplateFile);
+                IntPtr securityAttrs, int dwCreationDisposition,
+                int dwFlagsAndAttributes, IntPtr hTemplateFile);
 
             [DllImport("kernel32.dll", SetLastError = true)]
             internal static extern int GetFileType(SafeFileHandle hFile);
-
         }
 
         private void InitializeDcb()
         {
-            Dcb dcb = new Dcb();
+            var dcb = new Dcb();
             GetCommStateNative(ref dcb);
             dcb.Flags &= ~(1u << DcbFlagAbortOnError);
             SetCommStateNative(ref dcb);
@@ -386,10 +434,11 @@ namespace MissionPlanner.Comms
 
         private static string GetMessage(int errorCode)
         {
-            StringBuilder lpBuffer = new StringBuilder(0x200);
+            var lpBuffer = new StringBuilder(0x200);
             if (
-                NativeMethods.FormatMessage(0x3200, new HandleRef(null, IntPtr.Zero), errorCode, 0, lpBuffer, lpBuffer.Capacity,
-                              IntPtr.Zero) != 0)
+                NativeMethods.FormatMessage(0x3200, new HandleRef(null, IntPtr.Zero), errorCode, 0, lpBuffer,
+                    lpBuffer.Capacity,
+                    IntPtr.Zero) != 0)
             {
                 return lpBuffer.ToString();
             }
@@ -398,21 +447,21 @@ namespace MissionPlanner.Comms
 
         private static int MakeHrFromErrorCode(int errorCode)
         {
-            return (int)(0x80070000 | (uint)errorCode);
+            return (int) (0x80070000 | (uint) errorCode);
         }
 
         private static void WinIoError()
         {
-            int errorCode = Marshal.GetLastWin32Error();
+            var errorCode = Marshal.GetLastWin32Error();
             throw new IOException(GetMessage(errorCode), MakeHrFromErrorCode(errorCode));
         }
 
         private void GetCommStateNative(ref Dcb lpDcb)
         {
-            int commErrors = 0;
-            Comstat comStat = new Comstat();
+            var commErrors = 0;
+            var comStat = new Comstat();
 
-            for (int i = 0; i < CommStateRetries; i++)
+            for (var i = 0; i < CommStateRetries; i++)
             {
                 if (!NativeMethods.ClearCommError(m_Handle, ref commErrors, ref comStat))
                 {
@@ -428,10 +477,12 @@ namespace MissionPlanner.Comms
                 }
             }
         }
+
         private void SetCommStateNative(ref Dcb lpDcb)
         {
-            int commErrors = 0;
-            Comstat comStat = new Comstat(); for (int i = 0; i < CommStateRetries; i++)
+            var commErrors = 0;
+            var comStat = new Comstat();
+            for (var i = 0; i < CommStateRetries; i++)
             {
                 if (!NativeMethods.ClearCommError(m_Handle, ref commErrors, ref comStat))
                 {
