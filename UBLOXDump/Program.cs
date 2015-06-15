@@ -25,6 +25,13 @@ namespace UBLOXDump
         private static int UBX_step;
         private static uploadreq req;
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="file">raw dump</param>
+        /// <param name="outputfile">output</param>
+        /// <param name="startoffset">Memory location</param>
+        /// <param name="secondsoffset">Flash location</param>
         private static void ExtractPacketAddresses(string file, string outputfile, int startoffset,
             int secondsoffset = 0)
         {
@@ -143,6 +150,8 @@ namespace UBLOXDump
         {
             ExtractPacketAddresses("ublox 6mdata.raw", "Addrneo6m.txt", 0x1420, 0x26ddf4);
 
+            ExtractPacketAddresses("6mdata.raw", "Addrneo6m-2.txt", 0x1420, 0x26ddf4);
+
             ExtractPacketAddresses("datalea6h.raw", "Addrlea6h.txt", 0x3e4c, 0x8546dc);
 
             ExtractPacketAddresses("datalea6h-nu602.raw", "Addrlea6hnu602.txt", 0x3e4c, 0x8546dc);
@@ -150,17 +159,17 @@ namespace UBLOXDump
             ExtractPacketAddresses("dataneo7n.raw", "Addrneo7n.txt", 0x20001188, 0x862f0c);
 
 
-            //   return;
+             //  return;
 
-            ICommsSerial port = new TcpSerial(); //new SerialPort("com35",115200);
-            //port = new MissionPlanner.Comms.SerialPort();
+            ICommsSerial port;// = /*new TcpSerial();*/ //new SerialPort("com35" ,115200);
+            port = new MissionPlanner.Comms.SerialPort();
 
-            //port.PortName = "com35";
-            //port.BaudRate = 115200;
+            port.PortName = "com35";
+            port.BaudRate = 115200;
 
             // mp internal pass
-            port.PortName = "127.0.0.1";
-            port.BaudRate = 500;
+            //port.PortName = "127.0.0.1";
+            //port.BaudRate = 500;
 
             port.ReadBufferSize = 1024*1024;
 
@@ -253,6 +262,10 @@ b5 62 09 01 10 00 0c 19 00 00 00 00 00 00 83 69 21 00 00 00 02 11 5f f0
             //writepacket(port.BaseStream, header, rxmraw6h);
             //writepacket(port.BaseStream, header, rxmsfrb6h);
 
+            writepacket(port.BaseStream, header, rxmraw6m);
+            writepacket(port.BaseStream, header, rxmsfrb6m);
+
+            return;
 
             //turnon(port.BaseStream, header, 2, 0x10);
             //turnon(port.BaseStream, header, 2, 0x11);
@@ -285,6 +298,9 @@ b5 62 09 01 10 00 0c 19 00 00 00 00 00 00 83 69 21 00 00 00 02 11 5f f0
 
             return;
              */
+
+
+            // dump rom/memory
 
             req = new uploadreq();
             req.clas = 0x9;
