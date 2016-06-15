@@ -33,7 +33,7 @@ namespace UBLOXDump
         /// <param name="startoffset">Memory location</param>
         /// <param name="secondsoffset">Flash location</param>
         private static void ExtractPacketAddresses(string file, string outputfile, int startoffset,
-            int secondsoffset = 0)
+            int secondsoffset = 0, bool m8 = false)
         {
             if (!File.Exists(file))
                 return;
@@ -104,7 +104,8 @@ namespace UBLOXDump
 
                         var addr = br.ReadUInt32();
 
-                        br.BaseStream.Seek(4, SeekOrigin.Current);
+                        if (!m8)
+                            br.BaseStream.Seek(4, SeekOrigin.Current);
 
                         tw.WriteLine(posstart.ToString("X") + "\t" + clas.ToString("X") + "\t" + subclas.ToString("X") +
                                      "\t" + addr.ToString("X"));
@@ -158,13 +159,28 @@ namespace UBLOXDump
 
             ExtractPacketAddresses("dataneo7n.raw", "Addrneo7n.txt", 0x20001188, 0x862f0c);
 
+            ExtractPacketAddresses("UBX_M8_301_HPG_111_REFERENCE_NEOM8P2.b45d5e63c7aa261bd58dfbcbc22bad68.bin",
+                "Addrm8p.txt", 0, 0x6df34, true);
 
-             //  return;
+            ExtractPacketAddresses("EXT_G60_LEA-6H.fd1146bafac24b1347701312d42bb698.bin",
+                "Addrlea6h-2.txt", 0, 0x546dc);
+
+            ExtractPacketAddresses("FW101_EXT_TITLIS.42ec35ce38d201fd723f2c8b49b6a537.bin",
+                "Addr7.txt", 0, 0x62f0c);
+
+            ExtractPacketAddresses("UBLOX_M8_201.89cc4f1cd4312a0ac1b56c790f7c1622.bin",
+                "Addr8_201.txt", 0, 0x739e8);
+
+            ExtractPacketAddresses("UBX_M8_301_SPG.911f2b77b649eb90f4be14ce56717b49.bin",
+                "Addr8_301.txt", 0, 0x7904c, true);
+           
+            
+               return;
 
             ICommsSerial port;// = /*new TcpSerial();*/ //new SerialPort("com35" ,115200);
             port = new MissionPlanner.Comms.SerialPort();
 
-            port.PortName = "com35";
+            port.PortName = "com10";
             port.BaudRate = 115200;
 
             // mp internal pass
@@ -262,10 +278,10 @@ b5 62 09 01 10 00 0c 19 00 00 00 00 00 00 83 69 21 00 00 00 02 11 5f f0
             //writepacket(port.BaseStream, header, rxmraw6h);
             //writepacket(port.BaseStream, header, rxmsfrb6h);
 
-            writepacket(port.BaseStream, header, rxmraw6m);
-            writepacket(port.BaseStream, header, rxmsfrb6m);
+            //writepacket(port.BaseStream, header, rxmraw6m);
+            //writepacket(port.BaseStream, header, rxmsfrb6m);
 
-            return;
+            //return;
 
             //turnon(port.BaseStream, header, 2, 0x10);
             //turnon(port.BaseStream, header, 2, 0x11);
