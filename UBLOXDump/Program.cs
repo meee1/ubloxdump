@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using MissionPlanner.Comms;
+using System.Security.Cryptography;
 
 namespace UBLOXDump
 {
@@ -186,8 +187,10 @@ namespace UBLOXDump
             new msginfo("UPD", 9, 0xff),
             new msginfo("UPD-csum", 9, 0xd),
             new msginfo("UPD-DOWNL", 0x09, 0x01),
+            new msginfo("UPD-DOWNL-SEC", 0x09, 0x21),
             new msginfo("UPD-erase", 9, 0xb),
             new msginfo("UPD-EXEC", 0x09, 0x03),
+            new msginfo("UPD-EXEC-SEC", 0x09, 0x22),
             new msginfo("UPD-FLDET", 9, 8),
             new msginfo("UPD-identify", 9, 6),
             new msginfo("UPD-MEMCPY", 0x09, 0x04),
@@ -195,7 +198,7 @@ namespace UBLOXDump
             new msginfo("UPD-SAFE", 9, 7), // ENTER
             new msginfo("UPD-SOS", 9, 0x14),
             new msginfo("UPD-UPLOAD", 0x09, 0x02),
-            new msginfo("UPD-UPLOAD", 9, 2),
+            new msginfo("UPD-UPLOAD-SEC", 0x09, 0x20),
             new msginfo("UPD-write", 9, 0xc),
 
         };
@@ -208,6 +211,18 @@ namespace UBLOXDump
                 return new msginfo("UNKNOWN",0,0);
 
             return list.First();
+        }
+
+        static byte[] sha256(byte[] seed, byte[] packet)
+        {
+            using (SHA256Managed signit = new SHA256Managed())
+            {
+                signit.TransformBlock(seed, 0, seed.Length, null, 0);
+                signit.TransformFinalBlock(packet, 0, packet.Length);
+                var ctx = signit.Hash;
+
+                return ctx;
+            }
         }
 
         /// <summary>
@@ -373,8 +388,10 @@ namespace UBLOXDump
             ExtractPacketAddresses("UBX_M8_301_SPG.911f2b77b649eb90f4be14ce56717b49.bin",
                 "Addr8_301.txt", 0, 0x7904c, true);
 
+            ExtractPacketAddresses("UBX_M8_301_HPG_100_REFERENCE.dd38fd00c1d64d05d5b458d8a8fa4b41.bin",
+              "Addrm8p_301_100.txt", 0, 0x6805c, true);
 
-          
+            return;
             ICommsSerial port;// = /*new TcpSerial();*/ //new SerialPort("com35" ,115200);
             port = new MissionPlanner.Comms.SerialPort();
 
