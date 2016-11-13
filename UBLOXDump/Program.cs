@@ -537,7 +537,7 @@ b5 62 09 01 10 00 0c 19 00 00 00 00 00 00 83 69 21 00 00 00 02 11 5f f0
             var buf = new byte[] { 0xB5, 0x62, 0x09, 0x07, 0x00, 0x00, 0x10, 0x39 };
             buf = new byte[] {0xB5, 0x62, 0x09, 0x07, 0x01, 0x00, 0x01, 0x12, 0x4D};
 
-            port.Write(buf, 0, buf.Length);
+            //port.Write(buf, 0, buf.Length);
 
             //port.Close();
             //Thread.Sleep(1000);
@@ -728,6 +728,55 @@ b5 62 09 01 10 00 0c 19 00 00 00 00 00 00 83 69 21 00 00 00 02 11 5f f0
 
                     break;
             }
+        }
+
+        void temp0920_msg1()
+        {
+            byte[] data = new byte[44];
+            /*
+            ??:??:??  0000  B5 62 09 02 0C 00 FC 7F 08 00 04 00 00 00 00 00  µb....ü.........
+                      0010  00 00 9E 0B                                      .....
+
+            ??:??:??  0000  B5 62 09 20 2C 00 9C 59 C5 22 EC 34 1A 1A 30 CC  µb. ,..YÅ"ì4..0Ì
+                      0010  B1 FB 69 CB AD 9A 41 83 6E DD 27 E4 FB A6 8C 71  ±ûiË­.A.nÝ'äû¦.q
+                      0020  E3 AB 8A A4 0D 20 FC 7F 08 00 04 00 00 00 00 00  ã«.¤. ü.........
+                      0030  00 00 D0 44  
+             */
+            var val1 = 0x1A1A34EC22C5599C;
+            var val2 = 0x9AADCB69FBB1CC30;
+             var val3 = 0xA6FBE427DD6E8341;
+             var val4 = 0x200DA48AABE3718C;
+
+            //data[8 * 4] = 0x87FFC;
+            data[9*4] = 4;
+            Array.Copy(BitConverter.GetBytes(val1), 0, data, 0, 8);
+            Array.Copy(BitConverter.GetBytes(val2), 0, data, 8, 8);
+            data[10*4] = 0;
+
+            Array.Copy(BitConverter.GetBytes(val3), 0, data, 16, 8);
+            Array.Copy(BitConverter.GetBytes(val4), 0, data, 16+8, 8);
+        }
+
+        void temp0920_msg2()
+        {
+            /*
+          
+??:??:??  0000  B5 62 09 02 0C 00 00 00 80 00 30 00 00 00 00 00  µb........0.....
+          0010  00 00 C7 D6                                      ..ÇÖ.
+          
+??:??:??  0000  B5 62 09 20 2C 00 44 CF 68 EE 1F 73 48 65 9C 33  µb. ,.DÏhî.sHe.3
+          0010  28 A3 3B CC 6C F4 4D EC BF 57 81 D8 BB E1 CB E1  (£;ÌlôMì¿W.Ø»áËá
+          0020  B8 21 6C 8B A9 B0 00 00 80 00 30 00 00 00 00 00  ¸!l.©°....0.....
+          0030  00 00 C7 DC                                      ..ÇÜ.
+             */
+            /*
+    *(_QWORD *)&v10 = 0x6548731FEE68CF44i64;
+    *((_QWORD *)&v10 + 1) = 0xF46CCC3BA328339Ci64;
+    *(_QWORD *)&v11 = 0xE1BBD88157BFEC4Di64;
+    *((_QWORD *)&v11 + 1) = 0xB0A98B6C21B8E1CBi64;
+            */
+
+            // 800000
         }
 
         private static void ubx_checksum(byte ubx_data)
