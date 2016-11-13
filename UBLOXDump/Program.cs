@@ -356,7 +356,7 @@ namespace UBLOXDump
             ExtractPacketAddresses("dataneo7n.raw", "Addrneo7n.txt", 0x20001188, 0x862f0c);
 
             ExtractPacketAddresses("UBX_M8_301_HPG_111_REFERENCE_NEOM8P2.b45d5e63c7aa261bd58dfbcbc22bad68.bin",
-                "Addrm8p.txt", 0, 0x6df34, true); // 0x6e308
+                "Addrm8p.txt", 0, 0x6df34, true);
 
             ExtractPacketAddresses("UBX_M8_301_HPG_111_REFERENCE_NEOM8P2.b45d5e63c7aa261bd58dfbcbc22bad68.bin",
                "Addrm8p22.txt", 0, 0x6e308, true);
@@ -374,7 +374,7 @@ namespace UBLOXDump
                 "Addr8_301.txt", 0, 0x7904c, true);
 
 
-            return;
+          
             ICommsSerial port;// = /*new TcpSerial();*/ //new SerialPort("com35" ,115200);
             port = new MissionPlanner.Comms.SerialPort();
 
@@ -517,7 +517,7 @@ b5 62 09 01 10 00 0c 19 00 00 00 00 00 00 83 69 21 00 00 00 02 11 5f f0
             var buf = new byte[] { 0xB5, 0x62, 0x09, 0x07, 0x00, 0x00, 0x10, 0x39 };
             buf = new byte[] {0xB5, 0x62, 0x09, 0x07, 0x01, 0x00, 0x01, 0x12, 0x4D};
 
-            //port.Write(buf, 0, buf.Length);
+            port.Write(buf, 0, buf.Length);
 
             //port.Close();
             //Thread.Sleep(1000);
@@ -716,11 +716,11 @@ b5 62 09 01 10 00 0c 19 00 00 00 00 00 00 83 69 21 00 00 00 02 11 5f f0
             ck_b += ck_a;
         }
 
-        private static byte[] ubx_checksum(byte[] packet, int size)
+        private static byte[] ubx_checksum(byte[] packet, int size, int offset = 2)
         {
             uint a = 0x00;
             uint b = 0x00;
-            var i = 0;
+            var i = offset;
             while (i < size)
             {
                 a += packet[i++];
