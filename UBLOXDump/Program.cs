@@ -394,6 +394,12 @@ namespace UBLOXDump
             ExtractPacketAddresses("UBX_M8_301_HPG_100_REFERENCE.dd38fd00c1d64d05d5b458d8a8fa4b41.bin",
              "Addrm8p_301_100-2.txt", 0, 0x68394, true);
 
+            ExtractPacketAddresses("UBX_M8_301_HPG_130_REFERENCE_NEOM8P2.59a07babb501ba6a89ff87cac2f2765f.bin",
+             "Addrm8p_301_130-2.txt", 0, 0x718a8, true);
+
+            ExtractPacketAddresses("UBX_M8_301_HPG_130_REFERENCE_NEOM8P2.59a07babb501ba6a89ff87cac2f2765f.bin",
+             "Addrm8p_301_130-2a.txt", 0, 0x71ca0, true);
+
             return;
             ICommsSerial port;// = /*new TcpSerial();*/ //new SerialPort("com35" ,115200);
             port = new MissionPlanner.Comms.SerialPort();
