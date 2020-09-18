@@ -249,7 +249,7 @@ namespace UBLOXDump
 
             var lowestoffset = uint.MaxValue;
 
-            while (br.BaseStream.Position < (startoffset + 4000))
+            while (br.BaseStream.Position < (startoffset + 10000))
             {
                 var posstart = br.BaseStream.Position;
                 var addr = br.ReadUInt32();
@@ -399,6 +399,94 @@ namespace UBLOXDump
 
             ExtractPacketAddresses("UBX_M8_301_HPG_130_REFERENCE_NEOM8P2.59a07babb501ba6a89ff87cac2f2765f.bin",
              "Addrm8p_301_130-2a.txt", 0, 0x71ca0, true);
+
+            ExtractPacketAddresses("DO_EXT_301_HPG_140_REFERENCE.ab799cc302b64f28ba73b55dfa945a04.bin",
+                "Addrm8p_301_140.txt", 0x73980, 0x73980, true);
+
+            //0005bd16   
+            // 5bd1a   from 20 B1  ==  00 bf
+
+            var fileBytes = File.ReadAllBytes("DO_EXT_301_HPG_140_REFERENCE.ab799cc302b64f28ba73b55dfa945a04.bin");
+
+            var binreader = new BinaryReader(new MemoryStream(fileBytes));
+
+            string[] desc =
+            {
+                "UBX8",
+                "?",
+                "-1", "fwbase ", "fwstart", "fwend", "-1", "-1", "0", "-1", "?", "?"
+            };
+
+            for (int a = 0; a < 12; a++)
+            {
+                var item = binreader.ReadInt32();
+                Console.WriteLine("{1}\t0x{0:X} = {0}", item, desc[a]);
+
+            }
+
+            /*
+0.0   - Verifying image
+
+0.0 Image (file size 502984) for u-blox8 accepted
+
+0.0 Image Ver '3.01 (db0c89)'
+0.0   - CRC= 0x90A97896 0xEE9EBE1E
+0.0   - Trying to open port STDIO
+
+undefined4 __fastcall dochecksum(int *param_1,uint param_2)
+
+{
+  int *piVar1;
+  int iVar2;
+  int iVar3;
+  uint uVar4;
+  
+  uVar4 = param_2 >> 2;
+  iVar2 = 0;
+  iVar3 = 0;
+  piVar1 = param_1;
+  while (uVar4 != 0) {
+    iVar2 = iVar2 + *piVar1;
+    piVar1 = piVar1 + 1;
+    iVar3 = iVar3 + iVar2;
+    uVar4 = uVar4 - 1;
+  }
+  if ((iVar2 == *(int *)((int)param_1 + (param_2 & 0xfffffffc))) &&
+     (iVar3 == *(int *)((int)param_1 + (param_2 & 0xfffffffc) + 4))) {
+    return 1;
+  }
+  return 0;
+}
+
+            */
+
+            // should == 502972 or 502976    000000000007ACBC  000000000001EB2F
+
+            binreader.BaseStream.Seek(4, SeekOrigin.Begin);
+
+            var ivar2 = 0;
+            var ivar3 = 0;
+            while (binreader.BaseStream.Position < binreader.BaseStream.Length -  8)
+            {
+                var b = binreader.ReadInt32();
+                ivar2 = ivar2 + b;
+                ivar3 = ivar3 + ivar2;
+            }
+
+            var crc1 = binreader.ReadInt32();
+            var crc2 = binreader.ReadInt32();
+
+            if (ivar2 == crc1 && ivar3 == crc2)
+            {
+                Console.WriteLine("CRC passes");
+            }
+            else
+            {
+                Console.WriteLine("CRC fails should be 0x{0:X8} 0x{1:X8} currently {2:X8} {3:X8}", ivar2, ivar3, crc1,
+                    crc2);
+            }
+
+            Console.ReadLine();
 
             return;
             ICommsSerial port;// = /*new TcpSerial();*/ //new SerialPort("com35" ,115200);
